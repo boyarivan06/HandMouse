@@ -28,7 +28,7 @@ while not stop:
     success, img = cap.read()
     img = cv2.flip(img, 1)
     res_dec = detector.findHands(img)
-    if res_dec.any():
+    if not res_dec is None:
         img = res_dec
     lmList, _ = detector.findPosition(img)
     res = detector.get_finger_coords(4)
@@ -36,13 +36,16 @@ while not stop:
         pyautogui.moveTo(res[0], res[1])
     if len(lmList) != 0:
         length_click, _, _ = detector.findDistance(8, 4, img, draw=False)
+        length_right_click, _, _ = detector.findDistance(4, 12, img, draw=False)
         length_enable, _, _ = detector.findDistance(12, 4, img, draw=False)
-        if length_click < 50 and enabled:
-            print('CLICK!!!')
-            title = 'CLICK'
-            pyautogui.click()
-
+        if length_click < 60 and enabled:
+            print('mouse down')
+            pyautogui.mouseDown()
+        elif length_right_click < 50 and enabled:
+            print('mouse right click')
+            pyautogui.mouseDown(pyautogui.mouseDown(button='right'))
         else:
+            pyautogui.mouseUp()
             print('hand detected')
             '''if length_enable < 50:
                         enabled = not enabled
