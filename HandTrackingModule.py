@@ -19,7 +19,10 @@ class HandDetector():
         self.tipIds = [4, 8, 12, 16, 20]
 
     def findHands(self, img, draw=True):
-        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        try:
+            imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        except cv2.error:
+            return
         self.results = self.hands.process(imgRGB)
         # print(results.multi_hand_landmarks)
 
@@ -89,7 +92,7 @@ class HandDetector():
         try:
             finger = self.lmList[p]
         except IndexError:
-            print('index_error')
+            print('no any hands')
             return
         return finger[1], finger[2]
 
