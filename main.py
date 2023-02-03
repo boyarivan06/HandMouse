@@ -6,7 +6,6 @@ import sys
 import pyautogui
 from PyQt5 import QtWidgets
 
-
 cap = cv2.VideoCapture(0)
 cap.set(3, 1280)
 cap.set(4, 720)
@@ -28,7 +27,7 @@ while not stop:
     success, img = cap.read()
     img = cv2.flip(img, 1)
     res_dec = detector.findHands(img)
-    if not res_dec is None:
+    if res_dec is not None:
         img = res_dec
     lmList, _ = detector.findPosition(img)
     res = detector.get_finger_coords(4)
@@ -38,7 +37,11 @@ while not stop:
         length_click, _, _ = detector.findDistance(8, 4, img, draw=False)
         length_right_click, _, _ = detector.findDistance(4, 12, img, draw=False)
         length_enable, _, _ = detector.findDistance(12, 4, img, draw=False)
-        if length_click < 60 and enabled:
+        length_stop, _, _ = detector.findDistance(20, 4, img, draw=False)
+        if length_stop < 20:
+            stop = True
+            print('STOP')
+        elif length_click < 60 and enabled:
             print('mouse down')
             pyautogui.mouseDown()
         elif length_right_click < 50 and enabled:
