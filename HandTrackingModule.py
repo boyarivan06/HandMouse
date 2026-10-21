@@ -2,39 +2,74 @@ import cv2
 import mediapipe as mp
 import time
 import math
+from pathlib import Path
+
+from mediapipe.tasks.python import vision
+from mediapipe.tasks.python import core
 
 
 class HandDetector():
+    HAND_CONNECTIONS = [
+        (0, 1), (1, 2), (2, 3), (3, 4),
+        (0, 5), (5, 6), (6, 7), (7, 8),
+        (5, 9), (9, 10), (10, 11), (11, 12),
+        (9, 13), (13, 14), (14, 15), (15, 16),
+        (13, 17), (17, 18), (18, 19), (19, 20),
+        (0, 17),
+    ]
+
     def __init__(self, mode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, trackCon=0.5):
         self.mode = mode
         self.maxHands = maxHands
         self.modelComplexity = modelComplexity
         self.detectionCon = detectionCon
         self.trackCon = trackCon
+        self.tipIds = [4, 8, 12, 16, 20]
+        self.lmList = []
+        self.results = None
 
-        self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(
-            static_image_mode=self.mode,
-            max_num_hands=self.maxHands,
-            model_complexity=self.modelComplexity,
-            min_detection_confidence=self.detectionCon,
+        model_path = Path(__file__).resolve().parent / "models" / "hand_landmarker.task"
+        if not model_path.exists():
+            raise FileNotFoundError(
+                f"Не найден файл модели: {model_path}. Выполните 'make install'."
+            )
+
+        base_options = core.base_options.BaseOptions(model_asset_path=str(model_path))
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.VIDEO,
+            num_hands=self.maxHands,
+            min_hand_detection_confidence=self.detectionCon,
+            min_hand_presence_confidence=self.detectionCon,
             min_tracking_confidence=self.trackCon,
         )
-        self.mpDraw = mp.solutions.drawing_utils
-        self.tipIds = [4, 8, 12, 16, 20]
+        self.hands = vision.HandLandmarker.create_from_options(options)
+
+    def _draw_hand(self, img, landmarks):
+        h, w, _ = img.shape
+        points = []
+
+        for lm in landmarks:
+            cx, cy = int(lm.x * w), int(lm.y * h)
+            points.append((cx, cy))
+            cv2.circle(img, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
+
+        for p1, p2 in self.HAND_CONNECTIONS:
+            cv2.line(img, points[p1], points[p2], (0, 255, 0), 2)
 
     def findHands(self, img, draw=True):
         try:
             imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         except cv2.error:
             return
-        self.results = self.hands.process(imgRGB)
-        # print(results.multi_hand_landmarks)
 
-        if self.results.multi_hand_landmarks:
-            for handLms in self.results.multi_hand_landmarks:
-                if draw:
-                    self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=imgRGB)
+        timestamp_ms = int(time.time() * 1000)
+        self.results = self.hands.detect_for_video(mp_image, timestamp_ms)
+
+        if draw and self.results.hand_landmarks:
+            for hand_landmarks in self.results.hand_landmarks:
+                self._draw_hand(img, hand_landmarks)
         return img
 
     def findPosition(self, img, handNo=0, draw=True):
@@ -42,15 +77,14 @@ class HandDetector():
         yList = []
         bbox = []
         self.lmList = []
-        if self.results.multi_hand_landmarks:
-            myHand = self.results.multi_hand_landmarks[handNo]
-            for id, lm in enumerate(myHand.landmark):
-                # print(id, lm)
+
+        if self.results and self.results.hand_landmarks and handNo < len(self.results.hand_landmarks):
+            myHand = self.results.hand_landmarks[handNo]
+            for id, lm in enumerate(myHand):
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 xList.append(cx)
                 yList.append(cy)
-                # print(id, cx, cy)
                 self.lmList.append([id, cx, cy])
                 if draw:
                     cv2.circle(img, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
@@ -79,13 +113,11 @@ class HandDetector():
     def fingersUp(self):
         fingers = []
 
-        # Thumb
         if self.lmList[self.tipIds[0]][1] < self.lmList[self.tipIds[0] - 1][1]:
             fingers.append(1)
         else:
             fingers.append(0)
 
-        # 4 Fingers
         for id in range(1, 5):
             if self.lmList[self.tipIds[id]][2] < self.lmList[self.tipIds[id] - 2][2]:
                 fingers.append(1)

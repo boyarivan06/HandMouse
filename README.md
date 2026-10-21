@@ -16,6 +16,8 @@ source .venv/bin/activate
 make install
 ```
 
+`make install` автоматически скачивает модель `models/hand_landmarker.task`.
+
 ## Запуск
 
 ```bash
