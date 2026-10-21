@@ -8,13 +8,13 @@ help:
 	@echo "  make check    - проверить синтаксис Python-файлов"
 
 install:
-	python -m pip install -r requirements.txt
+	python3 -m pip install -r requirements.txt
 
 run:
-	python main.py
+	python3 main.py
 
 demo:
-	python HandTrackingModule.py
+	python3 HandTrackingModule.py
 
 check:
-	python -m py_compile main.py HandTrackingModule.py
+	python3 -m py_compile main.py HandTrackingModule.py
