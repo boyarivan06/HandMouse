@@ -13,8 +13,13 @@ class HandDetector():
         self.trackCon = trackCon
 
         self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.modelComplexity, self.detectionCon,
-                                        self.trackCon)
+        self.hands = self.mpHands.Hands(
+            static_image_mode=self.mode,
+            max_num_hands=self.maxHands,
+            model_complexity=self.modelComplexity,
+            min_detection_confidence=self.detectionCon,
+            min_tracking_confidence=self.trackCon,
+        )
         self.mpDraw = mp.solutions.drawing_utils
         self.tipIds = [4, 8, 12, 16, 20]
 

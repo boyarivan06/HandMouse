@@ -1,43 +1,43 @@
 import cv2
 import HandTrackingModule as htm
-# import cvzone
-import numpy as np
-import sys
 import pyautogui
-from PyQt5 import QtWidgets
+
+CAMERA_WIDTH = 1280
+CAMERA_HEIGHT = 720
 
 cap = cv2.VideoCapture(0)
-cap.set(3, 1280)
-cap.set(4, 720)
+cap.set(3, CAMERA_WIDTH)
+cap.set(4, CAMERA_HEIGHT)
 detector = htm.HandDetector(detectionCon=0.8)
-colorR = (255, 0, 255)
-app = QtWidgets.QApplication(sys.argv)
-desktop = QtWidgets.QApplication.desktop()
-cx, cy, w, h = 100, 100, desktop.width(), desktop.height()
-title = 'Image'
+
+screen_width, screen_height = pyautogui.size()
 
 # При подключении камеры могут возникнуть ошибки, поменяйте 0 из cap=cv2.VideoCapture(0) на 1 или 2.
-
-# cx, cy - координаты левой верхней точки нашего четырехугольника
-# w, h - ширина и длина (в нашем случае будет квадрат)
 
 stop = False
 enabled = True
 while not stop:
     success, img = cap.read()
+    if not success:
+        continue
+
     img = cv2.flip(img, 1)
     res_dec = detector.findHands(img)
     if res_dec is not None:
         img = res_dec
+
     lmList, _ = detector.findPosition(img)
     res = detector.get_finger_coords(4)
     if res:
-        pyautogui.moveTo(res[0], res[1])
+        mapped_x = int(res[0] * screen_width / CAMERA_WIDTH)
+        mapped_y = int(res[1] * screen_height / CAMERA_HEIGHT)
+        pyautogui.moveTo(mapped_x, mapped_y)
+
     if len(lmList) != 0:
         length_click, _, _ = detector.findDistance(8, 4, img, draw=False)
         length_right_click, _, _ = detector.findDistance(4, 12, img, draw=False)
-        length_enable, _, _ = detector.findDistance(12, 4, img, draw=False)
         length_stop, _, _ = detector.findDistance(20, 4, img, draw=False)
+
         if length_stop < 20:
             stop = True
             print('STOP')
@@ -46,20 +46,7 @@ while not stop:
             pyautogui.mouseDown()
         elif length_right_click < 50 and enabled:
             print('mouse right click')
-            pyautogui.mouseDown(pyautogui.mouseDown(button='right'))
+            pyautogui.click(button='right')
         else:
             pyautogui.mouseUp()
             print('hand detected')
-            '''if length_enable < 50:
-                        enabled = not enabled
-                        print('enabled' if enabled else 'disabled')'''
-
-        # Draw
-    '''imgNew = np.zeros_like(img, np.uint8)
-    out = img.copy()
-    alpha = 0.1
-    mask = imgNew.astype(bool)
-    out[mask] = cv2.addWeighted(img, alpha, imgNew, 1 - alpha, 0)[mask]
-'''
-    # cv2.imshow(title, out)
-    # cv2.waitKey(1)
